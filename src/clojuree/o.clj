@@ -18,28 +18,36 @@
   )
 )
 
-(defn get-random-feature [numbers bools nfs nps]
+(defn get-random-nfn [pool params nfs nps]
   (let [rand-num (fn [] 
          (cond 
-           (prob 0.5) (rand-nth numbers)))
+           (prob 0.5) (rand-nth params)
+           (and (not-empty pool) (prob 0.7)) (rand-nth pool)
+           :else (rand-int width)))
        ]
     (cond 
        (prob 0.5) (let [v1 (rand-num) v2 (rand-num) fn (rand-nth nfs)] 
-          '(fn v1 v2))
+          `(~fn ~v1 ~v2))
        :else (let [v1 (rand-num) v2 (rand-num) v3 (rand-num) v4 (rand-num) pred (rand-nth nps)]
-          '(if (pred v1 v2) v3 v4))
+          `(if (~pred ~v1 ~v2) ~v3 ~v4))
     )
   )
 )
+
+(defn get-random-nfn-pool [pool & args]
+  (let [curr (apply get-random-nfn pool args)
+        _pool (if (> (count pool) 10000) (pop pool) pool)]
+    (cons curr (lazy-seq (apply get-random-nfn-pool (conj _pool curr) args)))
+  )
+)
   
-(def nfs [+ - *])
-(def nps [> < =])
-(def numbers [x y i j])
 
-
-
+(def nfs ['+ '- '*])
+(def nps ['> '< '=])
+(def params ['x 'y 'i 'j 'c])
 
   
-(defn- main []
-  (print (slurp "blubber.txt"))
+(defn -main []
+  (println (clojure.string/join "\n" (take 10 (get-random-nfn-pool [] params nfs nps))))
+  ;(print (slurp "blubber.txt"))
 )
